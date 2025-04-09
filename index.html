@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pi JWT Token Grabber</title>
+  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 50px; }
+    button { font-size: 20px; padding: 10px 20px; margin-top: 20px; }
+    pre { background: #f4f4f4; padding: 15px; text-align: left; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>Lấy JWT Token từ Pi Browser</h1>
+  <p>Nhấn nút bên dưới để đăng nhập và lấy JWT Token</p>
+  <button onclick="getToken()">Lấy JWT Token</button>
+
+  <h2>🔐 JWT Token:</h2>
+  <pre id="tokenBox">Chưa có token...</pre>
+
+  <script>
+    function getToken() {
+      window.Pi.authenticate(["username", "payments"], function(auth, error) {
+        if (error) {
+          document.getElementById("tokenBox").textContent = "❌ Lỗi: " + error.message;
+        } else {
+          document.getElementById("tokenBox").textContent = auth.accessToken;
+          console.log("✅ JWT Token:", auth.accessToken);
+
+          // 👉 Nếu muốn gửi về server, bạn có thể gọi API ở đây
+          // fetch("https://your-backend.com/save-token", { method: "POST", ... })
+        }
+      });
+    }
+  </script>
+</body>
+</html>

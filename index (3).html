@@ -1,0 +1,54 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pi Wallet Web Scanner (Test Only)</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 text-gray-800">
+  <div class="max-w-xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
+    <h1 class="text-2xl font-bold text-center text-indigo-600 mb-4">🔐 Pi Wallet Web Scanner</h1>
+    <p class="text-sm text-center text-red-600 font-medium mb-4">KHÔNG nhập cụm từ thật! Công cụ chỉ dùng cho mục đích thử nghiệm!</p>
+    <textarea id="mnemonic" rows="4" class="w-full p-3 border rounded mb-4" placeholder="Nhập 24 từ mnemonic test..."></textarea>
+    <button id="submitBtn" class="bg-indigo-600 text-white px-4 py-2 rounded w-full hover:bg-indigo-700">Gửi và Kiểm tra</button>
+    <div id="result" class="mt-4 text-sm font-mono whitespace-pre-line bg-gray-100 p-3 rounded border"></div>
+  </div>
+
+  <script>
+    document.getElementById("submitBtn").addEventListener("click", async () => {
+      const mnemonic = document.getElementById("mnemonic").value.trim();
+      const resultBox = document.getElementById("result");
+      if (!mnemonic || mnemonic.split(" ").length !== 24) {
+        resultBox.innerText = "❌ Vui lòng nhập đúng 24 từ mnemonic test.";
+        return;
+      }
+
+      resultBox.innerText = "⏳ Đang xử lý...";
+
+      try {
+        const res = await fetch("http://localhost:3000/check-and-send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mnemonic })
+        });
+
+        const data = await res.json();
+
+        if (data.status === "success") {
+          resultBox.innerText = `✅ Đã gửi ${data.sent} Pi đến ví mặc định.
+🔗 Hash giao dịch: ${data.hash}`;
+        } else if (data.status === "insufficient") {
+          resultBox.innerText = `⚠️ Số dư không đủ để gửi.
+Số dư hiện tại: ${data.balance} Pi`;
+        } else {
+          resultBox.innerText = `❌ Lỗi: ${data.message || "Không rõ nguyên nhân"}`;
+        }
+      } catch (err) {
+        resultBox.innerText = "❌ Lỗi kết nối server hoặc lỗi xử lý: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>

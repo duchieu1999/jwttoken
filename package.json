@@ -1,0 +1,30 @@
+{
+  "name": "pi-wallet-scanner",
+  "version": "1.0.0",
+  "description": "Ứng dụng thử nghiệm kiểm tra ví Pi Network",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "keywords": [
+    "pi",
+    "pi-network",
+    "stellar",
+    "blockchain",
+    "wallet"
+  ],
+  "author": "Developer",
+  "license": "MIT",
+  "dependencies": {
+    "bip39": "^3.1.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "hdkey": "^2.1.0",
+    "node-fetch": "^2.6.7",
+    "stellar-sdk": "^10.4.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  }
+}

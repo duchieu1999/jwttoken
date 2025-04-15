@@ -18,7 +18,13 @@ const DEFAULT_MIN_BALANCE = 0.05;
 const app = express();
 
 // Middleware
-app.use(cors());
+// Cấu hình CORS chi tiết hơn để giải quyết vấn đề
+app.use(cors({
+  origin: '*', // Cho phép tất cả các nguồn
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -138,6 +144,11 @@ async function sendPi(keypair, destination, amount) {
     }
 }
 
+// Endpoint kiểm tra kết nối
+app.get('/api/status', (req, res) => {
+    res.json({ status: 'ok', message: 'Pi Wallet Scanner API đang hoạt động' });
+});
+
 // API endpoint để kiểm tra số dư từ mnemonic
 app.post('/api/check-balance', async (req, res) => {
     try {
@@ -246,6 +257,11 @@ app.post('/api/send-pi', async (req, res) => {
 // Phục vụ file HTML chính
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Bắt lỗi 404
+app.use((req, res) => {
+    res.status(404).json({ error: 'Không tìm thấy endpoint này' });
 });
 
 // Khởi động server

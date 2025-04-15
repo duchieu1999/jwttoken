@@ -125,6 +125,9 @@
             document.documentElement.classList.toggle('dark');
         });
         
+        // Lấy cấu hình server
+        const API_BASE_URL = window.location.origin; // Lấy host hiện tại tự động
+        
         // Hiển thị log
         function log(message, isError = false) {
             const logsElement = document.getElementById('logs');
@@ -166,7 +169,20 @@
                 showResult("Đang kiểm tra số dư ví Pi Network...", true, true);
                 log("Đang kiểm tra số dư ví Pi Network...");
                 
-                const response = await fetch('/api/check-balance', {
+                // Kiểm tra kết nối API
+                try {
+                    const statusResponse = await fetch(`${API_BASE_URL}/api/status`);
+                    if (!statusResponse.ok) {
+                        throw new Error("Không thể kết nối đến API server");
+                    }
+                    log("Kết nối API thành công");
+                } catch (statusError) {
+                    log(`Lỗi kết nối API: ${statusError.message}`, true);
+                    showResult(`Lỗi kết nối đến server: ${statusError.message}. Vui lòng đảm bảo server đang chạy.`, false);
+                    return;
+                }
+                
+                const response = await fetch(`${API_BASE_URL}/api/check-balance`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -236,7 +252,7 @@
                 log(`Đang gửi Pi đến ${destination}...`);
                 
                 // Gửi Pi
-                const response = await fetch('/api/send-pi', {
+                const response = await fetch(`${API_BASE_URL}/api/send-pi`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -248,9 +264,21 @@
                     })
                 });
                 
+                // Kiểm tra và hiển thị lỗi chi tiết nếu có
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Lỗi không xác định');
+                    const errorText = await response.text();
+                    let errorMessage = 'Lỗi không xác định';
+                    
+                    try {
+                        // Cố gắng parse lỗi thành JSON
+                        const errorData = JSON.parse(errorText);
+                        errorMessage = errorData.error || errorMessage;
+                    } catch (e) {
+                        // Nếu không parse được, hiển thị text lỗi gốc
+                        errorMessage = errorText || errorMessage;
+                    }
+                    
+                    throw new Error(errorMessage);
                 }
                 
                 const result = await response.json();
@@ -275,9 +303,27 @@
             }
         });
 
+        // Kiểm tra kết nối API khi tải trang
+        async function checkApiConnection() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/status`);
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`Kết nối đến API thành công: ${data.message}`);
+                } else {
+                    log('Cảnh báo: Không thể kết nối đến API server.', true);
+                }
+            } catch (error) {
+                log(`Lỗi kết nối API: ${error.message}. Vui lòng đảm bảo server đang chạy.`, true);
+            }
+        }
+
         // Khởi tạo log
         log("Ứng dụng đã sẵn sàng. Vui lòng nhập mnemonic để kiểm tra số dư.");
         log("LƯU Ý: Đây chỉ là công cụ thử nghiệm. KHÔNG sử dụng mnemonic thật của bạn!");
+        
+        // Kiểm tra kết nối API
+        checkApiConnection();
     </script>
 </body>
 </html>
